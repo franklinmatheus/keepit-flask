@@ -4,4 +4,4 @@ bp = Blueprint('index', __name__)
 
 @bp.route('/')
 def index():
-	return render_template('auth/login.html')
+	return render_template('public/index.html')

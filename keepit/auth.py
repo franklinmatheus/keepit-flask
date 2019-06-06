@@ -9,8 +9,13 @@ bp = Blueprint('auth',__name__,url_prefix='/auth')
 @bp.route('/register', methods=('GET', 'POST'))
 def register():
 	if request.method == 'POST':
+		fname = request.form['fname']
+		lname = request.form['lname']
+		born = request.form['born']
 		username = request.form['username']
+		confirm_password = request.form['cpassword']
 		password = request.form['password']
+
 		db = get_db()
 		cursor = db.cursor(dictionary=True)
 		error = None
@@ -19,6 +24,8 @@ def register():
 			error = 'Username is required'
 		elif not password:
 			error = 'Password is required'
+		elif password != confirm_password:
+			error = 'Password confirmation failed'
 		else:
 			select_user = ('SELECT * FROM keepit.usuario WHERE login = %s')
 			data_user = (username,)
@@ -29,9 +36,8 @@ def register():
 				error = 'Username already exists'
 
 		if error is None:
-			insert_user = ('INSERT INTO keepit.usuario (login, senha) VALUES (%s, %s)')
-			data_user = (username,password)
-
+			insert_user = ('INSERT INTO keepit.usuario (fnome, lnome, nascimento, login, senha) VALUES (%s, %s, %s, %s, %s)')
+			data_user = (fname, lname, born, username, password)
 			cursor.execute(insert_user,data_user)
 			db.commit()
 			cursor.close()
@@ -62,7 +68,7 @@ def login():
 		if error is None:
 			session.clear()
 			session['user_id'] = user['id_usuario']
-			return redirect(url_for('index'))
+			return redirect(url_for('restrict.index'))
 
 		flash(error)
 

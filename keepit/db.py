@@ -1,5 +1,5 @@
 import mysql.connector
-from flask import  g
+from flask import g
 
 def get_db():
 	if 'db' not in g:
@@ -11,3 +11,4 @@ def close_db(e=None):
 
 	if db is not None:
 		db.close()
+
