@@ -5,13 +5,13 @@
   <div class="sidebar-sticky">
     <ul class="nav flex-column">
       <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('restrict.index') }}">
+        <a class="nav-link" href="{{ url_for('restrict.home') }}">
           <span data-feather="home"></span>
           Home <span class="sr-only"></span>
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link active" href="{{ url_for('restrict.revenues') }}">
+        <a class="nav-link" href="{{ url_for('revenues.home') }}">
           <span data-feather="home"></span>
           Revenues home <span class="sr-only"></span>
         </a>
@@ -23,13 +23,13 @@
     </h6>
     <ul class="nav flex-column mb-2">
       <li class="nav-item">
-        <a class="nav-link" href="#">
+        <a class="nav-link active" href="{{ url_for('revenues.common') }}">
           <span data-feather="file-text"></span>
           Common revenues
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">
+        <a class="nav-link" href="{{ url_for('revenues.uncommon') }}">
           <span data-feather="file-text"></span>
           Uncommon revenues
         </a>

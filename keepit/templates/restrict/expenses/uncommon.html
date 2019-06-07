@@ -5,13 +5,13 @@
   <div class="sidebar-sticky">
     <ul class="nav flex-column">
       <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('restrict.index') }}">
+        <a class="nav-link" href="{{ url_for('restrict.home') }}">
           <span data-feather="home"></span>
           Home <span class="sr-only"></span>
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('restrict.expenses') }}">
+        <a class="nav-link" href="{{ url_for('expenses.home') }}">
           <span data-feather="home"></span>
           Expenses home <span class="sr-only"></span>
         </a>
@@ -23,25 +23,25 @@
     </h6>
     <ul class="nav flex-column mb-2">
       <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('restrict.expenses.common') }}">
+        <a class="nav-link" href="{{ url_for('expenses.common') }}">
           <span data-feather="file-text"></span>
           Common expenses
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link active" href="{{ url_for('restrict.expenses.uncommon') }}">
+        <a class="nav-link active" href="{{ url_for('expenses.uncommon') }}">
           <span data-feather="file-text"></span>
           Uncommon expenses
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('restrict.expenses.estimated') }}">
+        <a class="nav-link" href="{{ url_for('expenses.estimated') }}">
           <span data-feather="file-text"></span>
           Estimated expenses
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('restrict.expenses.programmed') }}">
+        <a class="nav-link" href="{{ url_for('expenses.programmed') }}">
           <span data-feather="file-text"></span>
           Programmed expenses
         </a>

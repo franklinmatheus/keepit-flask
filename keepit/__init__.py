@@ -24,6 +24,12 @@ def create_app(test_config=None):
 	from . import restrict
 	app.register_blueprint(restrict.bp)
 
+	from . import expenses
+	app.register_blueprint(expenses.bp)
+
+	from . import revenues
+	app.register_blueprint(revenues.bp)
+
 	app.add_url_rule('/',endpoint='index')
 	
 	return app
