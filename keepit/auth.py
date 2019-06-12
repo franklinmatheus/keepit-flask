@@ -2,11 +2,20 @@ import functools
 
 from flask import (Blueprint, flash, g, redirect, render_template, request, session, url_for)
 from werkzeug.security import check_password_hash, generate_password_hash
-from keepit.db import get_db
+from keepit.db import insert_user, check_login, select_user_by_id, select_user_by_credentials
 
 bp = Blueprint('auth',__name__,url_prefix='/auth')
 
+def only_unlogged_user(view):
+	@functools.wraps(view)
+	def wrapped_view(**kwargs):
+		if g.user is not None:
+			return redirect(url_for('restrict.home'))
+		return view(**kwargs)
+	return wrapped_view
+
 @bp.route('/register', methods=('GET', 'POST'))
+@only_unlogged_user
 def register():
 	if request.method == 'POST':
 		fname = request.form['fname']
@@ -15,9 +24,6 @@ def register():
 		username = request.form['username']
 		confirm_password = request.form['cpassword']
 		password = request.form['password']
-
-		db = get_db()
-		cursor = db.cursor(dictionary=True)
 		error = None
 
 		if not username:
@@ -27,22 +33,13 @@ def register():
 		elif password != confirm_password:
 			error = 'Password confirmation failed'
 		else:
-			select_user = ('SELECT * FROM keepit.usuario WHERE login = %s')
-			data_user = (username,)
-			cursor.execute(select_user,data_user)
-			user = cursor.fetchone()
-
+			user = check_login(username)
 			if user is not None:
 				error = 'Username already exists'
 
 		if error is None:
-			insert_user = ('INSERT INTO keepit.usuario (fnome, lnome, nascimento, login, senha) VALUES (%s, %s, %s, %s, %s)')
-			data_user = (fname, lname, born, username, password)
-			cursor.execute(insert_user,data_user)
-			db.commit()
-			cursor.close()
-			db.close()
-			
+			data = {'fname':fname,'lname':lname,'born':born,'username':username,'password':password}
+			insert_user(data)
 			return redirect(url_for('auth.login'))
 
 		flash(error)
@@ -50,18 +47,14 @@ def register():
 	return render_template('auth/register.html')
 
 @bp.route('/login', methods=('GET', 'POST'))
+@only_unlogged_user
 def login():
 	if request.method == 'POST':
 		username = request.form['username']
 		password = request.form['password']
-		db = get_db()
-		cursor = db.cursor(dictionary=True)
 		error = None
 
-		select_user = ('SELECT * FROM keepit.usuario WHERE login = %s AND senha = %s')
-		data_user = (username,password)
-		cursor.execute(select_user,data_user)
-		user = cursor.fetchone()
+		user = select_user_by_credentials(username,password)
 		if user is None:
 			error = 'Username or password incorrects'
 
@@ -81,14 +74,7 @@ def load_logged_in_user():
 	if user_id is None:
 		g.user = None
 	else:
-		db = get_db()
-		cursor = db.cursor(dictionary=True)
-		
-		select_user = ('SELECT * FROM keepit.usuario WHERE id_usuario = %s')
-		data_user = (user_id,)
-		cursor.execute(select_user,data_user)
-		user = cursor.fetchone()
-
+		user = select_user_by_id(user_id)
 		g.user = user
 
 @bp.route('/logout')
