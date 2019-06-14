@@ -149,7 +149,6 @@ def estimated():
 def programmed():
     return render_template('restrict/expenses/programmed.html')
 
-
 '''
 Before requests
 '''

@@ -424,45 +424,337 @@ def select_expense_uncommon(id_user: int):
 	return results
 
 ''' 
-keepit.despesa_estimada clue
+keepit.recurso clue
++-------------------+-------------+------+-----+---------+----------------+
+| Field             | Type        | Null | Key | Default | Extra          |
++-------------------+-------------+------+-----+---------+----------------+
+| id_recurso        | int(11)     | NO   | PRI | NULL    | auto_increment |
+| id_usuario        | int(11)     | NO   | PRI | NULL    |                |
+| nome              | varchar(45) | NO   |     | NULL    |                |
+| data_cancelamento | date        | YES  |     | NULL    |                |
+| data_anotacao     | datetime    | NO   |     | NULL    |                |
++-------------------+-------------+------+-----+---------+----------------+
 
-'''
-def insert_expense_estimated(id_user: int, data: dict):
-	'''
-	The dictionary has to be as shown below:
+keepit.pagamento_recurso clue
++----------------+---------+------+-----+---------+-------+
+| Field          | Type    | Null | Key | Default | Extra |
++----------------+---------+------+-----+---------+-------+
+| id_recurso     | int(11) | NO   | PRI | NULL    |       |
+| data_pagamento | date    | NO   |     | NULL    |       |
+| valor          | float   | NO   |     | NULL    |       |
++----------------+---------+------+-----+---------+-------+
 
-	'''
-
-''' 
-keepit.despesa_programada clue
-
-'''
-def insert_expense_programmed(id_user: int, data: dict):
-	'''
-	The dictionary has to be as shown below:
-
-	'''
-
-
-''' 
+keepit.receita clue
++------------+---------+------+-----+---------+----------------+
+| Field      | Type    | Null | Key | Default | Extra          |
++------------+---------+------+-----+---------+----------------+
+| id_receita | int(11) | NO   | PRI | NULL    | auto_increment |
+| id_recurso | int(11) | NO   | MUL | NULL    |                |
++------------+---------+------+-----+---------+----------------+
+ 
 keepit.receita_comum clue
-
++------------+------------+------+-----+---------+-------+
+| Field      | Type       | Null | Key | Default | Extra |
++------------+------------+------+-----+---------+-------+
+| id_receita | int(11)    | NO   | PRI | NULL    |       |
+| constante  | tinyint(1) | NO   |     | NULL    |       |
+| automatica | tinyint(1) | NO   |     | NULL    |       |
+| dia_mes    | int(11)    | NO   |     | NULL    |       |
+| status     | tinyint(1) | NO   |     | NULL    |       |
++------------+------------+------+-----+---------+-------+
 '''
-def insert_revenues_common(id_user: int, data: dict):
+def insert_revenue_common(id_user: int, data: dict):
 	'''
 	The dictionary has to be as shown below:
-
+	{
+		'value': 0,
+		'payment_date': 'dd/mm/yyyy',
+		'name': 'abc',
+		'cancelation_date': 'dd/mm/yyyy',
+		'annotation_date': 'dd/mm/yyyy',
+		'constant': 0,
+		'automatic': 0,
+		'month_day': 0,
+		'status': 0
+	}
 	'''
+	db = get_db()
+	cursor = db.cursor(dictionary=True)
+
+	insert_query = ('INSERT INTO keepit.recurso (id_usuario, nome, data_cancelamento, data_anotacao)'
+						+ 'VALUES (%s, %s, %s, %s)')
+	data_insert = (id_user,data['name'],data['cancelation_date'],data['annotation_date'])
+	cursor.execute(insert_query,data_insert)
+	id_resource = cursor.lastrowid
+
+	insert_query = ('INSERT INTO keepit.pagamento_recurso (id_recurso, data_pagamento, valor)'
+						+ 'VALUES (%s, %s, %s)')
+	data_insert = (id_resource,data['payment_date'],data['value'])
+	cursor.execute(insert_query,data_insert)
+
+	insert_query = ('INSERT INTO keepit.receita (id_recurso)'
+						+ 'VALUES (%s)')
+	data_insert = (id_resource,)
+	cursor.execute(insert_query,data_insert)
+	id_revenue = cursor.lastrowid
+	
+	insert_query = ('INSERT INTO keepit.receita_comum (id_receita, constante, automatica, dia_mes, status)'
+						+ 'VALUES (%s, %s, %s, %s, %s)')
+	data_insert = (id_revenue,data['constant'],data['automatic'],data['month_day'],data['status'])
+	cursor.execute(insert_query,data_insert)
+	db.commit()
+	cursor.close()
+	db.close()
+
+def select_revenue_common(id_user: int):
+	db = get_db()
+	cursor = db.cursor(dictionary=True)
+
+	select_query = ('SELECT * FROM'
+		+ '(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) '
+		+ 'JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) '
+        + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
+		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
+		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
+        + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC '
+        + 'LIMIT 1)) '
+		+ 'WHERE keepit.recurso.id_usuario=%s ORDER BY keepit.recurso.data_anotacao DESC')
+
+	select_data = (id_user,)
+	cursor.execute(select_query,select_data)
+	results = cursor.fetchall()
+	cursor.close()
+	db.close()
+
+	return results
+
+def update_common_revenues(id_user: int, today):
+	db = get_db()
+	cursor = db.cursor(dictionary=True)
+
+	select_query = ('(SELECT keepit.receita_comum.id_receita,keepit.receita_comum.automatica, '
+		+ 'keepit.recurso.id_recurso,keepit.pagamento_recurso.valor,keepit.pagamento_recurso.data_pagamento FROM '
+		+'(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) '
+		+ 'JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) '
+		+ 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
+		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
+		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
+		+ 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1))'
+		+ 'WHERE TIMESTAMPDIFF(MONTH,keepit.pagamento_recurso.data_pagamento,%s) > 0 '
+		+ 'AND keepit.recurso.id_usuario=%s '
+		+ ')UNION'
+		+ '(SELECT keepit.receita_comum.id_receita,keepit.receita_comum.automatica, '
+		+ 'keepit.recurso.id_recurso,keepit.pagamento_recurso.valor,keepit.pagamento_recurso.data_pagamento FROM '
+		+ '(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) '
+		+ 'JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) '
+		+ 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
+		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
+		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
+		+ 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) '
+		+ 'WHERE keepit.pagamento_recurso.data_pagamento IS NULL AND keepit.recurso.id_usuario=%s)')
+	select_data = (today,id_user,id_user)
+	cursor.execute(select_query,select_data)
+	results = cursor.fetchall()
+	
+	automatic = []
+	nonautomatic = []
+
+	for result in results:
+		if result['automatica'] == 1:
+			automatic.append(result)
+		else:
+			nonautomatic.append(result)
+
+	for curr in nonautomatic:
+		update_query = ('UPDATE keepit.receita_comum SET keepit.receita_comum.status = 0 WHERE keepit.receita_comum.id_receita = %s')
+		update_data = (curr['id_receita'],)
+		cursor.execute(update_query,update_data)
+
+	for curr in automatic:
+		payment_date = None
+		last_update = curr['data_pagamento']
+		
+		if last_update.month == 12:
+			payment_date = datetime.datetime(last_update.year+1, 1, last_update.day)
+		else:
+			payment_date = datetime.datetime(last_update.year, last_update.month+1, last_update.day)
+
+		insert_query = ('INSERT INTO keepit.pagamento_recurso (id_recurso,data_pagamento,valor) values (%s, %s, %s)')
+		inser_data = (curr['id_recurso'],payment_date,curr['valor'])
+		cursor.execute(insert_query,inser_data)
+	
+	db.commit()
+	cursor.close()
+	db.close()
+
+
+def update_common_revenue_constant(id_resource: int):
+	db = get_db()
+	cursor = db.cursor(dictionary=True)
+
+	select_query = ('SELECT keepit.pagamento_recurso.valor FROM '
+	+ '(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) '
+    + 'JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) '
+    + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
+	+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
+	+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
+    + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) '
+	+ 'WHERE keepit.recurso.id_recurso=%s')
+	select_data = (id_resource,)
+	cursor.execute(select_query,select_data)
+	resource = cursor.fetchone()
+	update_common_revenue_inconstant(id_resource,resource['valor'])
+
+
+def update_common_revenue_inconstant(id_resource: int, value: float):
+	db = get_db()
+	cursor = db.cursor(dictionary=True)
+
+	select_query = ('SELECT keepit.receita_comum.dia_mes,keepit.receita_comum.id_receita,keepit.pagamento_recurso.data_pagamento FROM '
+	+ '(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) '
+    + 'JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) '
+    + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
+	+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
+	+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
+    + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) '
+	+ 'WHERE keepit.recurso.id_recurso=%s')
+	select_data = (id_resource,)
+	cursor.execute(select_query,select_data)
+	resource = cursor.fetchone()
+
+	payment_date = None
+	if resource['data_pagamento'] is not None:
+		if resource['data_pagamento'].month == 12:
+			payment_date = datetime.datetime(resource['data_pagamento'].year+1, 1, resource['data_pagamento'].day)
+		else:
+			payment_date = datetime.datetime(resource['data_pagamento'].year, resource['data_pagamento'].month+1, resource['data_pagamento'].day)
+	else:
+		temp_date = datetime.datetime.now()
+		temp_day = resource['dia_mes']
+		if temp_day < temp_date.day:
+			payment_date = datetime.datetime(temp_date.year, temp_date.month, temp_day)
+		elif temp_day > temp_date.day:
+			if temp_date.month == 1:
+				payment_date = datetime.datetime(temp_date.year-1, 12, temp_day)
+			else:
+				payment_date = datetime.datetime(temp_date.year, temp_date.month-1, temp_day)
+		else:
+			payment_date = datetime.datetime.now().strftime("%Y-%m-%d")
+
+	insert_query = ('INSERT INTO keepit.pagamento_recurso (id_recurso,data_pagamento,valor) values (%s, %s, %s)')
+	inser_data = (id_resource,payment_date,value)
+	cursor.execute(insert_query,inser_data)
+	
+	update_query = ('UPDATE keepit.receita_comum SET keepit.receita_comum.status = 1 WHERE keepit.receita_comum.id_receita = %s')
+	update_data = (resource['id_receita'],)
+	cursor.execute(update_query,update_data)
+	
+	db.commit()
+	cursor.close()
+	db.close()
 
 ''' 
-keepit.receita_incomum clue
+keepit.recurso clue
++-------------------+-------------+------+-----+---------+----------------+
+| Field             | Type        | Null | Key | Default | Extra          |
++-------------------+-------------+------+-----+---------+----------------+
+| id_recurso        | int(11)     | NO   | PRI | NULL    | auto_increment |
+| id_usuario        | int(11)     | NO   | PRI | NULL    |                |
+| valor             | int(11)     | NO   |     | NULL    |                |
+| data_pagamento    | date        | NO   |     | NULL    |                |
+| nome              | varchar(45) | NO   |     | NULL    |                |
+| data_cancelamento | date        | NO   |     | NULL    |                |
+| data_anotacao     | date        | NO   |     | NULL    |                |
++-------------------+-------------+------+-----+---------+----------------+
 
+keepit.pagamento_recurso clue
++----------------+---------+------+-----+---------+-------+
+| Field          | Type    | Null | Key | Default | Extra |
++----------------+---------+------+-----+---------+-------+
+| id_recurso     | int(11) | NO   | PRI | NULL    |       |
+| data_pagamento | date    | NO   |     | NULL    |       |
+| valor          | float   | NO   |     | NULL    |       |
++----------------+---------+------+-----+---------+-------+
+
+keepit.receita clue
++------------+---------+------+-----+---------+----------------+
+| Field      | Type    | Null | Key | Default | Extra          |
++------------+---------+------+-----+---------+----------------+
+| id_receita | int(11) | NO   | PRI | NULL    | auto_increment |
+| id_recurso | int(11) | NO   | MUL | NULL    |                |
++------------+---------+------+-----+---------+----------------+
+
+keepit.receita_incomum clue
++------------+--------------+------+-----+---------+-------+
+| Field      | Type         | Null | Key | Default | Extra |
++------------+--------------+------+-----+---------+-------+
+| id_receita | int(11)      | NO   | PRI | NULL    |       |
+| emissor    | varchar(100) | NO   |     | NULL    |       |
+| motivo     | varchar(100) | NO   |     | NULL    |       |
++------------+--------------+------+-----+---------+-------+
 '''
-def insert_revenues_uncommon(id_user: int, data: dict):
+def insert_revenue_uncommon(id_user: int, data: dict):
 	'''
 	The dictionary has to be as shown below:
-
+	{
+		'value': 0,
+		'payment_date': 'dd/mm/yyyy',
+		'name': 'abc',
+		'cancelation_date': 'dd/mm/yyyy',
+		'annotation_date': 'dd/mm/yyyy',
+		'emitter': 'abc',
+		'reason': 'abc'
+	}
 	'''
+	db = get_db()
+	cursor = db.cursor(dictionary=True)
+
+	insert_query = ('INSERT INTO keepit.recurso (id_usuario, nome, data_cancelamento, data_anotacao)'
+						+ 'VALUES (%s, %s, %s, %s)')
+	data_insert = (id_user,data['name'],data['cancelation_date'],data['annotation_date'])
+	cursor.execute(insert_query,data_insert)
+	id_resource = cursor.lastrowid
+
+	insert_query = ('INSERT INTO keepit.pagamento_recurso (id_recurso, data_pagamento, valor)'
+						+ 'VALUES (%s, %s, %s)')
+	data_insert = (id_resource,data['payment_date'],data['value'])
+	cursor.execute(insert_query,data_insert)
+
+	insert_query = ('INSERT INTO keepit.receita (id_recurso)'
+						+ 'VALUES (%s)')
+	data_insert = (id_resource,)
+	cursor.execute(insert_query,data_insert)
+	id_revenue = cursor.lastrowid
+	
+	insert_query = ('INSERT INTO keepit.receita_incomum (id_receita, emissor, motivo)'
+						+ 'VALUES (%s, %s, %s)')
+	data_insert = (id_revenue,data['emitter'],data['reason'])
+	cursor.execute(insert_query,data_insert)
+	db.commit()
+	cursor.close()
+	db.close()
+
+def select_revenue_uncommon(id_user: int):
+	db = get_db()
+	cursor = db.cursor(dictionary=True)
+
+	select_query = ('SELECT * FROM'
+		+ '(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) '
+		+ 'JOIN keepit.receita_incomum ON keepit.receita.id_receita=keepit.receita_incomum.id_receita) '
+        + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
+		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
+		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
+        + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC '
+        + 'LIMIT 1)) '
+		+ 'WHERE keepit.recurso.id_usuario=%s ORDER BY keepit.recurso.data_anotacao DESC')
+
+	select_data = (id_user,)
+	cursor.execute(select_query,select_data)
+	results = cursor.fetchall()
+	cursor.close()
+	db.close()
+
+	return results
 
 def remove_resource(id_resource: int):
 	db = get_db()
