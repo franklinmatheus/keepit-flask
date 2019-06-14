@@ -34,6 +34,7 @@
           Uncommon expenses
         </a>
       </li>
+      <!--
       <li class="nav-item">
         <a class="nav-link" href="{{ url_for('expenses.estimated') }}">
           <span data-feather="file-text"></span>
@@ -46,6 +47,7 @@
           Programmed expenses
         </a>
       </li>
+      -->
     </ul>
   </div>
 </nav>
@@ -55,7 +57,7 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
   <h1 class="h2">Uncommon expenses</h1>
 </div>
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="col-md-4 pt-3 pb-3 mb-3">
   <form method="POST">
     {% for message in get_flashed_messages() %}
     <div class="alert alert-danger" role="alert">{{ message }}</div>
@@ -88,55 +90,55 @@
 {% endblock %}
 
 {% block section_2 %}
-  <h2>Your uncommon expenses</h2>
-  <div class="table-responsive">
-    <table class="table table-striped">
-      <thead class="thead-dark">
+<h2>Your uncommon expenses</h2>
+<div class="table-responsive">
+  <table class="table table-striped">
+    <thead class="thead-dark">
+      <tr>
         <tr>
-          <tr>
-            <th>Name</th>
-            <th>Value</th>
-            <th>Payment date</th>
-            <th>Cancelation date</th>
-            <th>Anotation date</th>
-            <th>Destination</th>
-            <th></th>
-            <th></th>
-          </tr>
+          <th>Name</th>
+          <th>Value</th>
+          <th>Payment date</th>
+          <th>Cancelation date</th>
+          <th>Anotation date</th>
+          <th>Destination</th>
+          <th></th>
+          <th></th>
         </tr>
-      </thead>
-      <tbody>
-        {% for expense in uncommon_expenses %}
-        <tr>
-          <td>{{ expense['nome'] }}</td>
-          <td>R$ {{ expense['valor'] }}</td>
-          <td>{{ expense['data_pagamento'] }}</td>
-          <td>
-            {% if expense['data_cancelamento'] == None %}
-            Not canceled yet
-            {% else %}
-            {{ expense['data_cancelamento'] }}
-            {% endif %}
-          </td>
-          <td>{{ expense['data_anotacao'] }}</td>
-          <td>{{ expense['destino'] }}</td>
-          <td>
-            <form method="POST" action="{{ url_for('expenses.delete_uncommon', id=expense['id_recurso']) }}">
-              <button type="submit" class="btn btn-danger btn-sm">Remove</button>
-            </form>
-          </td>
-          <td>
-            {% if expense['data_cancelamento'] == None %}
-            <form method="POST" action="{{ url_for('expenses.cancel_uncommon', id=expense['id_recurso']) }}">
-              <button type="submit" class="btn btn-warning btn-sm">Cancel</button>
-            </form>
-            {% else %}
-            <button type="submit" class="btn btn-warning btn-sm" disabled>Cancel</button>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+      </tr>
+    </thead>
+    <tbody>
+      {% for expense in uncommon_expenses %}
+      <tr>
+        <td>{{ expense['nome'] }}</td>
+        <td>R$ {{ expense['valor'] }}</td>
+        <td>{{ expense['data_pagamento'] }}</td>
+        <td>
+          {% if expense['data_cancelamento'] == None %}
+          Not canceled yet
+          {% else %}
+          {{ expense['data_cancelamento'] }}
+          {% endif %}
+        </td>
+        <td>{{ expense['data_anotacao'] }}</td>
+        <td>{{ expense['destino'] }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('expenses.delete_uncommon', id=expense['id_recurso']) }}">
+            <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+          </form>
+        </td>
+        <td>
+          {% if expense['data_cancelamento'] == None %}
+          <form method="POST" action="{{ url_for('expenses.cancel_uncommon', id=expense['id_recurso']) }}">
+            <button type="submit" class="btn btn-warning btn-sm">Cancel</button>
+          </form>
+          {% else %}
+          <button type="submit" class="btn btn-warning btn-sm" disabled>Cancel</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}
