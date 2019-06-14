@@ -1,1 +1,3 @@
-# sistema-gerenciamento-economico
+# keepit
+
+A simple economic manager.
