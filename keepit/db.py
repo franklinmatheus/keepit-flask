@@ -140,7 +140,7 @@ def insert_expense_common(id_user: int, data: dict):
 		'payment_date': 'dd/mm/yyyy',
 		'name': 'abc',
 		'cancelation_date': 'dd/mm/yyyy',
-		'anotation_date': 'dd/mm/yyyy',
+		'annotation_date': 'dd/mm/yyyy',
 		'constant': 0,
 		'automatic': 0,
 		'month_day': 0,
@@ -152,7 +152,7 @@ def insert_expense_common(id_user: int, data: dict):
 
 	insert_query = ('INSERT INTO keepit.recurso (id_usuario, nome, data_cancelamento, data_anotacao)'
 						+ 'VALUES (%s, %s, %s, %s)')
-	data_insert = (id_user,data['name'],data['cancelation_date'],data['anotation_date'])
+	data_insert = (id_user,data['name'],data['cancelation_date'],data['annotation_date'])
 	cursor.execute(insert_query,data_insert)
 	id_resource = cursor.lastrowid
 
@@ -336,6 +336,15 @@ keepit.recurso clue
 | data_anotacao     | date        | NO   |     | NULL    |                |
 +-------------------+-------------+------+-----+---------+----------------+
 
+keepit.pagamento_recurso clue
++----------------+---------+------+-----+---------+-------+
+| Field          | Type    | Null | Key | Default | Extra |
++----------------+---------+------+-----+---------+-------+
+| id_recurso     | int(11) | NO   | PRI | NULL    |       |
+| data_pagamento | date    | NO   |     | NULL    |       |
+| valor          | float   | NO   |     | NULL    |       |
++----------------+---------+------+-----+---------+-------+
+
 keepit.despesa clue
 +------------+---------+------+-----+---------+----------------+
 | Field      | Type    | Null | Key | Default | Extra          |
@@ -360,10 +369,59 @@ def insert_expense_uncommon(id_user: int, data: dict):
 		'payment_date': 'dd/mm/yyyy',
 		'name': 'abc',
 		'cancelation_date': 'dd/mm/yyyy',
-		'anotation_date': 'dd/mm/yyyy',
-		'destino': 'abc'
+		'annotation_date': 'dd/mm/yyyy',
+		'destination': 'abc'
 	}
 	'''
+	db = get_db()
+	cursor = db.cursor(dictionary=True)
+
+	insert_query = ('INSERT INTO keepit.recurso (id_usuario, nome, data_cancelamento, data_anotacao)'
+						+ 'VALUES (%s, %s, %s, %s)')
+	data_insert = (id_user,data['name'],data['cancelation_date'],data['annotation_date'])
+	cursor.execute(insert_query,data_insert)
+	id_resource = cursor.lastrowid
+
+	insert_query = ('INSERT INTO keepit.pagamento_recurso (id_recurso, data_pagamento, valor)'
+						+ 'VALUES (%s, %s, %s)')
+	data_insert = (id_resource,data['payment_date'],data['value'])
+	cursor.execute(insert_query,data_insert)
+
+	insert_query = ('INSERT INTO keepit.despesa (id_recurso)'
+						+ 'VALUES (%s)')
+	data_insert = (id_resource,)
+	cursor.execute(insert_query,data_insert)
+	id_expense = cursor.lastrowid
+	
+	insert_query = ('INSERT INTO keepit.despesa_incomum (id_despesa, destino)'
+						+ 'VALUES (%s, %s)')
+	data_insert = (id_expense,data['destination'])
+	cursor.execute(insert_query,data_insert)
+	db.commit()
+	cursor.close()
+	db.close()
+
+def select_expense_uncommon(id_user: int):
+	db = get_db()
+	cursor = db.cursor(dictionary=True)
+
+	select_query = ('SELECT * FROM'
+		+ '(((keepit.recurso JOIN keepit.despesa ON keepit.recurso.id_recurso=keepit.despesa.id_recurso) '
+		+ 'JOIN keepit.despesa_incomum ON keepit.despesa.id_despesa=keepit.despesa_incomum.id_despesa) '
+        + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
+		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
+		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
+        + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC '
+        + 'LIMIT 1)) '
+		+ 'WHERE keepit.recurso.id_usuario=%s ORDER BY keepit.recurso.data_anotacao DESC')
+
+	select_data = (id_user,)
+	cursor.execute(select_query,select_data)
+	results = cursor.fetchall()
+	cursor.close()
+	db.close()
+
+	return results
 
 ''' 
 keepit.despesa_estimada clue
