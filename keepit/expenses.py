@@ -1,5 +1,10 @@
 from flask import (Blueprint, flash, g, redirect, render_template, request, session, url_for)
-from keepit.db import get_db, insert_expense_common, select_expense_common, update_common_expenses, update_common_expense_constant, update_common_expense_inconstant, remove_resource, cancel_resource
+from keepit.db import get_db
+from keepit.db import  insert_expense_common, select_expense_common, update_common_expenses
+from keepit.db import insert_expense_uncommon, select_expense_uncommon
+from keepit.db import update_common_expense_constant, update_common_expense_inconstant
+from keepit.db import remove_resource, cancel_resource
+
 from keepit.auth import login_required
 import datetime
 
@@ -18,7 +23,7 @@ def common():
         value = request.form['value']
         month_day = request.form['month_day']
         status = 1
-        anotation_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        annotation_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         payment_date = None
         error = None
 
@@ -52,7 +57,7 @@ def common():
                 status = 0
                
             data = {'name':name,'value':value,'month_day':month_day,
-                'payment_date':payment_date,'anotation_date':anotation_date,
+                'payment_date':payment_date,'annotation_date':annotation_date,
                 'cancelation_date':None,'automatic':automatic,
                 'constant':constant,'status':status}
 
@@ -93,11 +98,46 @@ def update_common_inconstant(id):
         update_common_expense_inconstant(id,value)
     return redirect(url_for('expenses.common'))
 
-
 @bp.route('/uncommon', methods=('GET', 'POST'))
 @login_required
 def uncommon():
-    return render_template('restrict/expenses/uncommon.html')
+    if request.method == 'POST':
+        name = request.form['name']
+        value = request.form['value']
+        payment_date = request.form['payment_date']
+        destination = request.form['destination']
+        annotation_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        error = None
+
+        if payment_date == '':
+            error = 'You must provide a payment date'
+        elif payment_date > datetime.datetime.now().strftime("%Y-%m-%d"):
+            error = 'Payment date can not be in the future'
+
+        if error is None:
+            data = {'name':name,'value':value,'payment_date':payment_date,
+                'destination':destination,'annotation_date':annotation_date,
+                'cancelation_date':None}
+            insert_expense_uncommon(session.get('user_id'),data)
+        elif error is not None:
+            flash(error)
+
+    uncommon_expenses = select_expense_uncommon(session.get('user_id'))
+    return render_template('restrict/expenses/uncommon.html',uncommon_expenses=uncommon_expenses)
+
+@bp.route('/uncommon/<int:id>/delete', methods=['POST'])
+@login_required
+def delete_uncommon(id):
+    if request.method == 'POST':
+        remove_resource(id)
+    return redirect(url_for('expenses.uncommon'))
+
+@bp.route('/uncommon/<int:id>/cancel', methods=['POST'])
+@login_required
+def cancel_uncommon(id):
+    if request.method == 'POST':
+        cancel_resource(id,datetime.datetime.now().strftime("%Y-%m-%d"))
+    return redirect(url_for('expenses.uncommon'))
 
 @bp.route('/estimated', methods=('GET', 'POST'))
 @login_required
@@ -115,4 +155,4 @@ Before requests
 '''
 @bp.before_app_request
 def check_common_expenses():
-    update_common_expenses(session.get('user_id'),'2019-06-29')
+    update_common_expenses(session.get('user_id'),datetime.datetime.now().strftime("%Y-%m-%d"))
