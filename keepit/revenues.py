@@ -5,15 +5,31 @@ from keepit.db import insert_revenue_uncommon, select_revenue_uncommon
 from keepit.db import update_common_revenue_constant, update_common_revenue_inconstant
 from keepit.db import remove_resource, cancel_resource
 
+from keepit.db_analysis import get_total_revenues_by_day, get_total_revenues_by_month
+
 from keepit.auth import login_required
 import datetime
+import json
 
 bp = Blueprint('revenues',__name__,url_prefix='/restrict/revenues')
 
 @bp.route('/', methods=('GET', 'POST'))
 @login_required
 def home():
-    return render_template('restrict/revenues.html')
+    result = get_total_revenues_by_day(session.get('user_id'))
+    calendar_info = {}    
+    for i in range(0,len(result)):
+        calendar_info[i] = {
+            'data_pagamento': result[i]['data_pagamento'].strftime("%Y-%m-%d"), 
+            'quantidade': result[i]['quantidade'], 
+            'total': result[i]['total']
+        }
+    info_type = 'revenues'
+    
+    chart_info = get_total_revenues_by_month(session.get('user_id'),datetime.datetime.now().year)
+    return render_template('restrict/revenues.html',calendar_info=json.dumps(calendar_info),
+        info_type=info_type,chart_info=json.dumps(chart_info),
+        current_year=datetime.datetime.now().year)
 
 @bp.route('/common', methods=('GET', 'POST'))
 @login_required
