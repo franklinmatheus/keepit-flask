@@ -1,0 +1,106 @@
+<script>
+    var chart_line_color_exp = '#f24141'
+    var chart_background_color_exp = 'rgba(242, 65, 65, 0.2)'
+    var calendar_data_color_exp = '#f24141'
+
+    var chart_line_color_rev = '#1c8c2c'
+    var chart_background_color_rev = 'rgb(28, 140, 44, 0.2)'
+    var calendar_data_color_rev = '#1c8c2c'
+</script>
+{% extends 'restrict/common/base.html' %}
+
+{% block nav %}
+<nav class="col-md-2 d-none d-md-block bg-light sidebar">
+    <div class="sidebar-sticky">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('restrict.home') }}">
+                <span data-feather="home"></span>
+                Home <span class="sr-only"></span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('revenues.home') }}">
+                <span data-feather="file"></span>
+                Revenues
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('expenses.home') }}">
+                <span data-feather="shopping-cart"></span>
+                Expenses
+                </a>
+            </li>
+        </ul>
+        <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+            <span>Analysis</span>
+        </h6>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('restrict.home') }}">
+                <span data-feather="home"></span>
+                Report <span class="sr-only"></span>
+            </a>
+            </li>
+        </ul>
+        <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+            <span>Family</span>
+        </h6>
+    </div>
+</nav>
+{% endblock %}
+
+{% block section_1 %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Your informations for {{ current_year }}</h1>
+</div>
+<div class="row text-center pt-3 pb-2 mb-3">
+    <div class="col-12 pt-3 pb-2 mb-3">
+        <h1><b>Hello, Franklin!</b></h1>
+        <h1>Here are some informations about your savings...</h1>
+    </div>
+    <div class="col-12 pt-4 pb-2 mb-3">
+        <h3>As I can see, you 
+            {% if info_diff < 0 %}
+            <span class="badge badge-danger">spend more than you earn!</span> <h1>That's terrible!</h1>
+            {% elif info_diff > 0 %}
+            <span class="badge badge-success">spend less than you earn!</span> <h1>That's excellent!</h1>
+            {% else %}
+            <span class="badge badge-primary">are balanced with your expenses.</span> <h1>That's good!</h1>
+            {% endif %}
+        </h3>
+    </div>
+</div>
+<canvas class="my-4 w-100" id="myChart" width="800" height="380"></canvas>
+{% endblock %}
+
+{% block section_2 %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Statistics</h1>
+</div>
+<div class="row text-center pt-3 pb-2 mb-3">
+    <div class="col-12 pt-3 pb-2 mb-3">
+        <h1><b>Franklin, based on your history...</b></h1>
+        <h3>If you continue like this, next month you can have a 
+            {% if next_step < 0 %}
+            <span class="badge badge-danger">NEGATIVE</span>
+            {% elif next_step > 0 %}
+            <span class="badge badge-success">POSITIVE</span>
+            {% else %}
+            <span class="badge badge-primary">BALANCED</span>
+            {% endif %}
+            balance of R$ {{ next_step }}.
+        </h3>
+        <h2>
+            {% if next_step < 0 %}
+            That's no good.
+            {% elif next_step > 0 %}
+            That's NICE!
+            {% else %}
+            That's okay.
+            {% endif %}
+        </h2>
+    </div>
+</div>
+<canvas class="my-4 w-100" id="myChart2" width="800" height="380"></canvas>
+{% endblock %}

@@ -36,7 +36,7 @@ def home():
 def common():
     if request.method == 'POST':
         name = request.form['name']
-        value = request.form['value']
+        value = 0
         month_day = request.form['month_day']
         status = 1
         annotation_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -55,7 +55,13 @@ def common():
 
         if constant == 0 and automatic == 1:
             error = 'A common revenue can not be automatic and inconstant'
-        
+
+        if 'value' in request.form:
+            value = int(request.form['value'])
+
+        if value <= 0 and automatic == True:
+            error = 'The value must be higher than R$ 0'
+
         if error is None:
             if automatic == 1:
                 temp_date = datetime.datetime.now()

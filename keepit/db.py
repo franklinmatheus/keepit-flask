@@ -66,9 +66,9 @@ def select_user_by_id(id: int):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 	
-	select_user = ('SELECT * FROM (keepit.usuario JOIN keepit.credenciais_usuario '
-						+ 'ON keepit.usuario.id_usuario=keepit.credenciais_usuario.id_usuario) '
-						+ 'WHERE keepit.usuario.id_usuario = %s')
+	select_user = ('''SELECT * FROM (keepit.usuario JOIN keepit.credenciais_usuario 
+					ON keepit.usuario.id_usuario=keepit.credenciais_usuario.id_usuario) 
+					WHERE keepit.usuario.id_usuario = %s''')
 	data_user = (id,)
 	cursor.execute(select_user,data_user)
 	user = cursor.fetchone()
@@ -81,9 +81,10 @@ def select_user_by_credentials(username: str, password: str):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	select_user = ('SELECT * FROM (keepit.usuario JOIN keepit.credenciais_usuario '
-						+ 'ON keepit.usuario.id_usuario=keepit.credenciais_usuario.id_usuario) '
-						+ 'WHERE keepit.credenciais_usuario.login = %s AND keepit.credenciais_usuario.senha = %s')
+	select_user = ('''SELECT * FROM (keepit.usuario JOIN keepit.credenciais_usuario 
+					ON keepit.usuario.id_usuario=keepit.credenciais_usuario.id_usuario) 
+					WHERE keepit.credenciais_usuario.login = %s 
+					AND keepit.credenciais_usuario.senha = %s''')
 	data_user = (username,password)
 	cursor.execute(select_user,data_user)
 	user = cursor.fetchone()
@@ -150,25 +151,24 @@ def insert_expense_common(id_user: int, data: dict):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	insert_query = ('INSERT INTO keepit.recurso (id_usuario, nome, data_cancelamento, data_anotacao)'
-						+ 'VALUES (%s, %s, %s, %s)')
+	insert_query = ('''INSERT INTO keepit.recurso (id_usuario, nome, data_cancelamento, data_anotacao)
+						VALUES (%s, %s, %s, %s)''')
 	data_insert = (id_user,data['name'],data['cancelation_date'],data['annotation_date'])
 	cursor.execute(insert_query,data_insert)
 	id_resource = cursor.lastrowid
 
-	insert_query = ('INSERT INTO keepit.pagamento_recurso (id_recurso, data_pagamento, valor)'
-						+ 'VALUES (%s, %s, %s)')
+	insert_query = ('''INSERT INTO keepit.pagamento_recurso (id_recurso, data_pagamento, valor)
+						VALUES (%s, %s, %s)''')
 	data_insert = (id_resource,data['payment_date'],data['value'])
 	cursor.execute(insert_query,data_insert)
 
-	insert_query = ('INSERT INTO keepit.despesa (id_recurso)'
-						+ 'VALUES (%s)')
+	insert_query = ('INSERT INTO keepit.despesa (id_recurso) VALUES (%s)')
 	data_insert = (id_resource,)
 	cursor.execute(insert_query,data_insert)
 	id_expense = cursor.lastrowid
 	
-	insert_query = ('INSERT INTO keepit.despesa_comum (id_despesa, constante, automatica, dia_mes, status)'
-						+ 'VALUES (%s, %s, %s, %s, %s)')
+	insert_query = ('''INSERT INTO keepit.despesa_comum (id_despesa, constante, automatica, dia_mes, status)
+						VALUES (%s, %s, %s, %s, %s)''')
 	data_insert = (id_expense,data['constant'],data['automatic'],data['month_day'],data['status'])
 	cursor.execute(insert_query,data_insert)
 	db.commit()
@@ -179,15 +179,15 @@ def select_expense_common(id_user: int):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	select_query = ('SELECT * FROM'
-		+ '(((keepit.recurso JOIN keepit.despesa ON keepit.recurso.id_recurso=keepit.despesa.id_recurso) '
-		+ 'JOIN keepit.despesa_comum ON keepit.despesa.id_despesa=keepit.despesa_comum.id_despesa) '
-        + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
-		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
-		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
-        + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC '
-        + 'LIMIT 1)) '
-		+ 'WHERE keepit.recurso.id_usuario=%s ORDER BY keepit.recurso.data_anotacao DESC')
+	select_query = ('''SELECT * FROM
+		(((keepit.recurso JOIN keepit.despesa ON keepit.recurso.id_recurso=keepit.despesa.id_recurso) 
+		JOIN keepit.despesa_comum ON keepit.despesa.id_despesa=keepit.despesa_comum.id_despesa) 
+        JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = 
+			(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso 
+				WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso 
+			ORDER BY keepit.pagamento_recurso.data_pagamento DESC 
+			LIMIT 1)) 
+		WHERE keepit.recurso.id_usuario=%s ORDER BY keepit.recurso.data_anotacao DESC''')
 
 	select_data = (id_user,)
 	cursor.execute(select_query,select_data)
@@ -201,27 +201,18 @@ def update_common_expenses(id_user: int, today):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	select_query = ('(SELECT keepit.despesa_comum.id_despesa,keepit.despesa_comum.automatica, '
-		+ 'keepit.recurso.id_recurso,keepit.pagamento_recurso.valor,keepit.pagamento_recurso.data_pagamento FROM '
-		+'(((keepit.recurso JOIN keepit.despesa ON keepit.recurso.id_recurso=keepit.despesa.id_recurso) '
-		+ 'JOIN keepit.despesa_comum ON keepit.despesa.id_despesa=keepit.despesa_comum.id_despesa) '
-		+ 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
-		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
-		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
-		+ 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1))'
-		+ 'WHERE TIMESTAMPDIFF(MONTH,keepit.pagamento_recurso.data_pagamento,%s) > 0 '
-		+ 'AND keepit.recurso.id_usuario=%s '
-		+ ')UNION'
-		+ '(SELECT keepit.despesa_comum.id_despesa,keepit.despesa_comum.automatica, '
-		+ 'keepit.recurso.id_recurso,keepit.pagamento_recurso.valor,keepit.pagamento_recurso.data_pagamento FROM '
-		+ '(((keepit.recurso JOIN keepit.despesa ON keepit.recurso.id_recurso=keepit.despesa.id_recurso) '
-		+ 'JOIN keepit.despesa_comum ON keepit.despesa.id_despesa=keepit.despesa_comum.id_despesa) '
-		+ 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
-		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
-		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
-		+ 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) '
-		+ 'WHERE keepit.pagamento_recurso.data_pagamento IS NULL AND keepit.recurso.id_usuario=%s)')
-	select_data = (today,id_user,id_user)
+	select_query = ('''SELECT keepit.despesa_comum.id_despesa,keepit.despesa_comum.automatica, 
+			keepit.recurso.id_recurso,keepit.pagamento_recurso.valor,keepit.pagamento_recurso.data_pagamento FROM 
+			(((keepit.recurso JOIN keepit.despesa ON keepit.recurso.id_recurso=keepit.despesa.id_recurso) 
+		JOIN keepit.despesa_comum ON keepit.despesa.id_despesa=keepit.despesa_comum.id_despesa) 
+		JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = 
+			(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso 
+			WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso 
+			ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1))
+		WHERE TIMESTAMPDIFF(MONTH,keepit.pagamento_recurso.data_pagamento,%s) > 0 
+		AND keepit.recurso.id_usuario=%s''')
+
+	select_data = (today,id_user)
 	cursor.execute(select_query,select_data)
 	results = cursor.fetchall()
 	
@@ -261,17 +252,21 @@ def update_common_expense_constant(id_resource: int):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	select_query = ('SELECT keepit.pagamento_recurso.valor FROM '
-	+ '(((keepit.recurso JOIN keepit.despesa ON keepit.recurso.id_recurso=keepit.despesa.id_recurso) '
-    + 'JOIN keepit.despesa_comum ON keepit.despesa.id_despesa=keepit.despesa_comum.id_despesa) '
-    + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
-	+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
-	+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
-    + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) '
-	+ 'WHERE keepit.recurso.id_recurso=%s')
+	select_query = ('''SELECT keepit.pagamento_recurso.valor FROM 
+		(((keepit.recurso JOIN keepit.despesa ON keepit.recurso.id_recurso=keepit.despesa.id_recurso) 
+    JOIN keepit.despesa_comum ON keepit.despesa.id_despesa=keepit.despesa_comum.id_despesa) 
+    JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = 
+		(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso 
+		WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso 
+		ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) 
+	WHERE keepit.recurso.id_recurso=%s''')
 	select_data = (id_resource,)
 	cursor.execute(select_query,select_data)
 	resource = cursor.fetchone()
+
+	cursor.close()
+	db.close()
+
 	update_common_expense_inconstant(id_resource,resource['valor'])
 
 
@@ -279,14 +274,14 @@ def update_common_expense_inconstant(id_resource: int, value: float):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	select_query = ('SELECT keepit.despesa_comum.dia_mes,keepit.despesa_comum.id_despesa,keepit.pagamento_recurso.data_pagamento FROM '
-	+ '(((keepit.recurso JOIN keepit.despesa ON keepit.recurso.id_recurso=keepit.despesa.id_recurso) '
-    + 'JOIN keepit.despesa_comum ON keepit.despesa.id_despesa=keepit.despesa_comum.id_despesa) '
-    + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
-	+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
-	+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
-    + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) '
-	+ 'WHERE keepit.recurso.id_recurso=%s')
+	select_query = ('''SELECT keepit.despesa_comum.dia_mes,keepit.despesa_comum.id_despesa,keepit.pagamento_recurso.data_pagamento FROM 
+		(((keepit.recurso JOIN keepit.despesa ON keepit.recurso.id_recurso=keepit.despesa.id_recurso) 
+    JOIN keepit.despesa_comum ON keepit.despesa.id_despesa=keepit.despesa_comum.id_despesa) 
+    JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = 
+		(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso 
+		WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso 
+		ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) 
+	WHERE keepit.recurso.id_recurso=%s''')
 	select_data = (id_resource,)
 	cursor.execute(select_query,select_data)
 	resource = cursor.fetchone()
@@ -376,27 +371,26 @@ def insert_expense_uncommon(id_user: int, data: dict):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	insert_query = ('INSERT INTO keepit.recurso (id_usuario, nome, data_cancelamento, data_anotacao)'
-						+ 'VALUES (%s, %s, %s, %s)')
+	insert_query = ('''INSERT INTO keepit.recurso (id_usuario, nome, data_cancelamento, data_anotacao)
+						VALUES (%s, %s, %s, %s)''')
 	data_insert = (id_user,data['name'],data['cancelation_date'],data['annotation_date'])
 	cursor.execute(insert_query,data_insert)
 	id_resource = cursor.lastrowid
 
-	insert_query = ('INSERT INTO keepit.pagamento_recurso (id_recurso, data_pagamento, valor)'
-						+ 'VALUES (%s, %s, %s)')
+	insert_query = ('''INSERT INTO keepit.pagamento_recurso (id_recurso, data_pagamento, valor)
+						VALUES (%s, %s, %s)''')
 	data_insert = (id_resource,data['payment_date'],data['value'])
 	cursor.execute(insert_query,data_insert)
 
-	insert_query = ('INSERT INTO keepit.despesa (id_recurso)'
-						+ 'VALUES (%s)')
+	insert_query = ('INSERT INTO keepit.despesa (id_recurso) VALUES (%s)')
 	data_insert = (id_resource,)
 	cursor.execute(insert_query,data_insert)
 	id_expense = cursor.lastrowid
 	
-	insert_query = ('INSERT INTO keepit.despesa_incomum (id_despesa, destino)'
-						+ 'VALUES (%s, %s)')
+	insert_query = ('INSERT INTO keepit.despesa_incomum (id_despesa, destino) VALUES (%s, %s)')
 	data_insert = (id_expense,data['destination'])
 	cursor.execute(insert_query,data_insert)
+	
 	db.commit()
 	cursor.close()
 	db.close()
@@ -405,15 +399,16 @@ def select_expense_uncommon(id_user: int):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	select_query = ('SELECT * FROM'
-		+ '(((keepit.recurso JOIN keepit.despesa ON keepit.recurso.id_recurso=keepit.despesa.id_recurso) '
-		+ 'JOIN keepit.despesa_incomum ON keepit.despesa.id_despesa=keepit.despesa_incomum.id_despesa) '
-        + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
-		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
-		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
-        + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC '
-        + 'LIMIT 1)) '
-		+ 'WHERE keepit.recurso.id_usuario=%s ORDER BY keepit.recurso.data_anotacao DESC')
+	select_query = ('''SELECT * FROM 
+			(((keepit.recurso JOIN keepit.despesa ON keepit.recurso.id_recurso=keepit.despesa.id_recurso) 
+		JOIN keepit.despesa_incomum ON keepit.despesa.id_despesa=keepit.despesa_incomum.id_despesa) 
+        JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = 
+			(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso 
+			WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso 
+			ORDER BY keepit.pagamento_recurso.data_pagamento DESC 
+			LIMIT 1)) 
+		WHERE keepit.recurso.id_usuario=%s 
+		ORDER BY keepit.recurso.data_anotacao DESC''')
 
 	select_data = (id_user,)
 	cursor.execute(select_query,select_data)
@@ -481,27 +476,27 @@ def insert_revenue_common(id_user: int, data: dict):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	insert_query = ('INSERT INTO keepit.recurso (id_usuario, nome, data_cancelamento, data_anotacao)'
-						+ 'VALUES (%s, %s, %s, %s)')
+	insert_query = ('''INSERT INTO keepit.recurso (id_usuario, nome, data_cancelamento, data_anotacao) 
+						VALUES (%s, %s, %s, %s)''')
 	data_insert = (id_user,data['name'],data['cancelation_date'],data['annotation_date'])
 	cursor.execute(insert_query,data_insert)
 	id_resource = cursor.lastrowid
 
-	insert_query = ('INSERT INTO keepit.pagamento_recurso (id_recurso, data_pagamento, valor)'
-						+ 'VALUES (%s, %s, %s)')
+	insert_query = ('''INSERT INTO keepit.pagamento_recurso (id_recurso, data_pagamento, valor) 
+						VALUES (%s, %s, %s)''')
 	data_insert = (id_resource,data['payment_date'],data['value'])
 	cursor.execute(insert_query,data_insert)
 
-	insert_query = ('INSERT INTO keepit.receita (id_recurso)'
-						+ 'VALUES (%s)')
+	insert_query = ('INSERT INTO keepit.receita (id_recurso) VALUES (%s)')
 	data_insert = (id_resource,)
 	cursor.execute(insert_query,data_insert)
 	id_revenue = cursor.lastrowid
 	
-	insert_query = ('INSERT INTO keepit.receita_comum (id_receita, constante, automatica, dia_mes, status)'
-						+ 'VALUES (%s, %s, %s, %s, %s)')
+	insert_query = ('''INSERT INTO keepit.receita_comum (id_receita, constante, automatica, dia_mes, status)
+						VALUES (%s, %s, %s, %s, %s)''')
 	data_insert = (id_revenue,data['constant'],data['automatic'],data['month_day'],data['status'])
 	cursor.execute(insert_query,data_insert)
+	
 	db.commit()
 	cursor.close()
 	db.close()
@@ -510,15 +505,15 @@ def select_revenue_common(id_user: int):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	select_query = ('SELECT * FROM'
-		+ '(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) '
-		+ 'JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) '
-        + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
-		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
-		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
-        + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC '
-        + 'LIMIT 1)) '
-		+ 'WHERE keepit.recurso.id_usuario=%s ORDER BY keepit.recurso.data_anotacao DESC')
+	select_query = ('''SELECT * FROM
+			(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) 
+		JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) 
+        JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = 
+			(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso 
+			WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso 
+			ORDER BY keepit.pagamento_recurso.data_pagamento DESC 
+			LIMIT 1)) 
+		WHERE keepit.recurso.id_usuario=%s ORDER BY keepit.recurso.data_anotacao DESC''')
 
 	select_data = (id_user,)
 	cursor.execute(select_query,select_data)
@@ -532,27 +527,17 @@ def update_common_revenues(id_user: int, today):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	select_query = ('(SELECT keepit.receita_comum.id_receita,keepit.receita_comum.automatica, '
-		+ 'keepit.recurso.id_recurso,keepit.pagamento_recurso.valor,keepit.pagamento_recurso.data_pagamento FROM '
-		+'(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) '
-		+ 'JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) '
-		+ 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
-		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
-		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
-		+ 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1))'
-		+ 'WHERE TIMESTAMPDIFF(MONTH,keepit.pagamento_recurso.data_pagamento,%s) > 0 '
-		+ 'AND keepit.recurso.id_usuario=%s '
-		+ ')UNION'
-		+ '(SELECT keepit.receita_comum.id_receita,keepit.receita_comum.automatica, '
-		+ 'keepit.recurso.id_recurso,keepit.pagamento_recurso.valor,keepit.pagamento_recurso.data_pagamento FROM '
-		+ '(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) '
-		+ 'JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) '
-		+ 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
-		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
-		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
-		+ 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) '
-		+ 'WHERE keepit.pagamento_recurso.data_pagamento IS NULL AND keepit.recurso.id_usuario=%s)')
-	select_data = (today,id_user,id_user)
+	select_query = ('''SELECT keepit.receita_comum.id_receita,keepit.receita_comum.automatica, 
+			keepit.recurso.id_recurso,keepit.pagamento_recurso.valor,keepit.pagamento_recurso.data_pagamento FROM 
+			(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) 
+		JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) 
+		JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = 
+			(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso 
+			WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso 
+			ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1))
+		WHERE TIMESTAMPDIFF(MONTH,keepit.pagamento_recurso.data_pagamento,%s) > 0 
+		AND keepit.recurso.id_usuario=%s''')
+	select_data = (today,id_user)
 	cursor.execute(select_query,select_data)
 	results = cursor.fetchall()
 	
@@ -592,14 +577,14 @@ def update_common_revenue_constant(id_resource: int):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	select_query = ('SELECT keepit.pagamento_recurso.valor FROM '
-	+ '(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) '
-    + 'JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) '
-    + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
-	+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
-	+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
-    + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) '
-	+ 'WHERE keepit.recurso.id_recurso=%s')
+	select_query = ('''SELECT keepit.pagamento_recurso.valor FROM 
+		(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) 
+    JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) 
+    JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = 
+		(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso 
+		WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso 
+		ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) 
+	WHERE keepit.recurso.id_recurso=%s''')
 	select_data = (id_resource,)
 	cursor.execute(select_query,select_data)
 	resource = cursor.fetchone()
@@ -610,14 +595,14 @@ def update_common_revenue_inconstant(id_resource: int, value: float):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	select_query = ('SELECT keepit.receita_comum.dia_mes,keepit.receita_comum.id_receita,keepit.pagamento_recurso.data_pagamento FROM '
-	+ '(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) '
-    + 'JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) '
-    + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
-	+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
-	+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
-    + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) '
-	+ 'WHERE keepit.recurso.id_recurso=%s')
+	select_query = ('''SELECT keepit.receita_comum.dia_mes,keepit.receita_comum.id_receita,keepit.pagamento_recurso.data_pagamento FROM 
+		(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) 
+    JOIN keepit.receita_comum ON keepit.receita.id_receita=keepit.receita_comum.id_receita) 
+    JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = 
+		(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso 
+		WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso 
+		ORDER BY keepit.pagamento_recurso.data_pagamento DESC LIMIT 1)) 
+	WHERE keepit.recurso.id_recurso=%s''')
 	select_data = (id_resource,)
 	cursor.execute(select_query,select_data)
 	resource = cursor.fetchone()
@@ -709,27 +694,26 @@ def insert_revenue_uncommon(id_user: int, data: dict):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	insert_query = ('INSERT INTO keepit.recurso (id_usuario, nome, data_cancelamento, data_anotacao)'
-						+ 'VALUES (%s, %s, %s, %s)')
+	insert_query = ('''INSERT INTO keepit.recurso (id_usuario, nome, data_cancelamento, data_anotacao)
+						VALUES (%s, %s, %s, %s)''')
 	data_insert = (id_user,data['name'],data['cancelation_date'],data['annotation_date'])
 	cursor.execute(insert_query,data_insert)
 	id_resource = cursor.lastrowid
 
-	insert_query = ('INSERT INTO keepit.pagamento_recurso (id_recurso, data_pagamento, valor)'
-						+ 'VALUES (%s, %s, %s)')
+	insert_query = ('''INSERT INTO keepit.pagamento_recurso (id_recurso, data_pagamento, valor) 
+						VALUES (%s, %s, %s)''')
 	data_insert = (id_resource,data['payment_date'],data['value'])
 	cursor.execute(insert_query,data_insert)
 
-	insert_query = ('INSERT INTO keepit.receita (id_recurso)'
-						+ 'VALUES (%s)')
+	insert_query = ('INSERT INTO keepit.receita (id_recurso) VALUES (%s)')
 	data_insert = (id_resource,)
 	cursor.execute(insert_query,data_insert)
 	id_revenue = cursor.lastrowid
 	
-	insert_query = ('INSERT INTO keepit.receita_incomum (id_receita, emissor, motivo)'
-						+ 'VALUES (%s, %s, %s)')
+	insert_query = ('INSERT INTO keepit.receita_incomum (id_receita, emissor, motivo) VALUES (%s, %s, %s)')
 	data_insert = (id_revenue,data['emitter'],data['reason'])
 	cursor.execute(insert_query,data_insert)
+	
 	db.commit()
 	cursor.close()
 	db.close()
@@ -738,15 +722,16 @@ def select_revenue_uncommon(id_user: int):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
 
-	select_query = ('SELECT * FROM'
-		+ '(((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) '
-		+ 'JOIN keepit.receita_incomum ON keepit.receita.id_receita=keepit.receita_incomum.id_receita) '
-        + 'JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = '
-		+ '(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso '
-		+ 'WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso '
-        + 'ORDER BY keepit.pagamento_recurso.data_pagamento DESC '
-        + 'LIMIT 1)) '
-		+ 'WHERE keepit.recurso.id_usuario=%s ORDER BY keepit.recurso.data_anotacao DESC')
+	select_query = ('''SELECT * FROM 
+		 (((keepit.recurso JOIN keepit.receita ON keepit.recurso.id_recurso=keepit.receita.id_recurso) 
+		JOIN keepit.receita_incomum ON keepit.receita.id_receita=keepit.receita_incomum.id_receita) 
+        JOIN keepit.pagamento_recurso ON keepit.pagamento_recurso.id_pagamento = 
+			(SELECT keepit.pagamento_recurso.id_pagamento FROM keepit.pagamento_recurso 
+			WHERE keepit.pagamento_recurso.id_recurso=keepit.recurso.id_recurso 
+			ORDER BY keepit.pagamento_recurso.data_pagamento DESC 
+			LIMIT 1)) 
+		WHERE keepit.recurso.id_usuario=%s 
+		ORDER BY keepit.recurso.data_anotacao DESC''')
 
 	select_data = (id_user,)
 	cursor.execute(select_query,select_data)
@@ -769,8 +754,7 @@ def remove_resource(id_resource: int):
 def cancel_resource(id_resource: int, cancelation_date):
 	db = get_db()
 	cursor = db.cursor(dictionary=True)
-	update_query = ('UPDATE keepit.recurso SET keepit.recurso.data_cancelamento=%s'
-		+ ' WHERE keepit.recurso.id_recurso=%s')
+	update_query = ('UPDATE keepit.recurso SET keepit.recurso.data_cancelamento=%s  WHERE keepit.recurso.id_recurso=%s')
 	update_data = (cancelation_date,id_resource)
 	cursor.execute(update_query,update_data)
 	db.commit()
