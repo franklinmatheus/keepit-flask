@@ -179,8 +179,6 @@ def get_total_expenses_by_day(id_user: int):
     cursor.execute(select_query,select_data)
     results = cursor.fetchall()
     
-    print(results)
-
     cursor.close()
     db.close()
 
