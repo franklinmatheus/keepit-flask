@@ -24,6 +24,9 @@ def create_app(test_config=None):
 	from . import restrict
 	app.register_blueprint(restrict.bp)
 
+	from . import analysis
+	app.register_blueprint(analysis.bp)
+
 	from . import expenses
 	app.register_blueprint(expenses.bp)
 

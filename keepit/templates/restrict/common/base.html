@@ -43,42 +43,45 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.3/js/bootstrap.min.js"></script>
     <script>
-        var datasource = []
-        var calendar_info = JSON.parse('{{ calendar_info|safe }}')
-        
-        for (var key in calendar_info) {
-            if (calendar_info.hasOwnProperty(key)) {           
-                day_info = {
-                    id: key,
-                    name: calendar_info[key]['quantidade'] + ' {{ info_type|safe }} in this day',
-                    value: 'A total of R$ ' + calendar_info[key]['total'],
-                    startDate: new Date(calendar_info[key]['data_pagamento'] + ' 00:00:01'),
-                    endDate: new Date(calendar_info[key]['data_pagamento'] + ' 00:00:01'),
-                    color: calendar_data_color
-                }
-                datasource.push(day_info)
-            }
-        }
-        console.log(datasource)
-        new Calendar($('#calendar').get(0), {
-            mouseOnDay: function(e) {
-                if (e.events.length > 0) {
-                    var content = '';
-                    for (var i in e.events) {
-                        content += '<div class="event-tooltip-content">'
-                                + '<div class="event-name" style="color:' + e.events[i].color + '">' + e.events[i].name + '</div>'
-                                + '<div class="event-location">' + e.events[i].value + '</div>'
-                                + '</div>';
+
+        if('{{ calendar_info|safe }}' != '') {
+            var datasource = []
+            var calendar_info = JSON.parse('{{ calendar_info|safe }}')
+            
+            for (var key in calendar_info) {
+                if (calendar_info.hasOwnProperty(key)) {           
+                    day_info = {
+                        id: key,
+                        name: calendar_info[key]['quantidade'] + ' {{ info_type|safe }} in this day',
+                        value: 'A total of R$ ' + calendar_info[key]['total'],
+                        startDate: new Date(calendar_info[key]['data_pagamento'] + ' 00:00:01'),
+                        endDate: new Date(calendar_info[key]['data_pagamento'] + ' 00:00:01'),
+                        color: calendar_data_color
                     }
-                    $(e.element).popover({trigger:'manual',container:'body',html:true,content:content});
-                    $(e.element).popover('show');
+                    datasource.push(day_info)
                 }
-            },
-            mouseOutDay: function(e) {
-                if(e.events.length > 0) $(e.element).popover('hide');
-            },
-            dataSource: datasource
-        });
+            }
+            console.log(datasource)
+            new Calendar($('#calendar').get(0), {
+                mouseOnDay: function(e) {
+                    if (e.events.length > 0) {
+                        var content = '';
+                        for (var i in e.events) {
+                            content += '<div class="event-tooltip-content">'
+                                    + '<div class="event-name" style="color:' + e.events[i].color + '">' + e.events[i].name + '</div>'
+                                    + '<div class="event-location">' + e.events[i].value + '</div>'
+                                    + '</div>';
+                        }
+                        $(e.element).popover({trigger:'manual',container:'body',html:true,content:content});
+                        $(e.element).popover('show');
+                    }
+                },
+                mouseOutDay: function(e) {
+                    if(e.events.length > 0) $(e.element).popover('hide');
+                },
+                dataSource: datasource
+            });
+        }
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.js"></script>    
@@ -86,44 +89,96 @@
         function float2real(value){
             return "R$ "+(value).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
         }
+        
+        if ('{{ chart_info|safe }}' != '') {
+            var chart_info = JSON.parse('{{ chart_info|safe }}')
+            var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+            var values = [0,0,0,0,0,0,0,0,0,0,0,0]
 
-        var chart_info = JSON.parse('{{ chart_info|safe }}')
-        var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-        var values = [0,0,0,0,0,0,0,0,0,0,0,0]
+            for (var info in chart_info)
+                values[chart_info[info]['mes'] - 1] = chart_info[info]['total']
 
-        for (var info in chart_info)
-            values[chart_info[info]['mes'] - 1] = chart_info[info]['total']
-
-        var ctx = document.getElementById("myChart");
-        var myChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: months,
-                datasets: [{
-                    data: values,
-                    label: "Total amount (R$)",
-                    borderColor: chart_line_color,
-                    borderWidth: 4,
-                    pointBackgroundColor: chart_line_color,
-                    backgroundColor: chart_background_color
-                }]
-            },
-            options: {
-                scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: false,
-                            callback: function(value, index, values) {
-                                return float2real(value);
-                            }
-                        }
+            var ctx = document.getElementById("myChart");
+            var myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        data: values,
+                        label: "Total amount (R$)",
+                        borderColor: chart_line_color,
+                        borderWidth: 4,
+                        pointBackgroundColor: chart_line_color,
+                        backgroundColor: chart_background_color
                     }]
                 },
-                legend: {
-                    display: false,
-                }
+                options: {scales: {yAxes: [{ticks: {beginAtZero: false, callback: function(value, index, values) { return float2real(value); }}}]},legend: {display: false,}}
+            });
+        } else if (('{{ chart_info_expenses|safe }}' != '') && ('{{ chart_info_revenues|safe }}' != '') && ('{{ diff_values|safe }}' != '')) {
+            var chart_info_expenses = JSON.parse('{{ chart_info_expenses|safe }}')
+            var chart_info_revenues = JSON.parse('{{ chart_info_revenues|safe }}')
+            var diff_values = JSON.parse('{{ diff_values|safe }}')
+
+            var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+            var values_expenses = [0,0,0,0,0,0,0,0,0,0,0,0]
+            var values_revenues = [0,0,0,0,0,0,0,0,0,0,0,0]
+            var values_diff = [0,0,0,0,0,0,0,0,0,0,0,0]
+
+            for (var info in chart_info_expenses)
+                values_expenses[chart_info_expenses[info]['mes'] - 1] = chart_info_expenses[info]['total']
+            
+            for (var info in chart_info_revenues)
+                values_revenues[chart_info_revenues[info]['mes'] - 1] = chart_info_revenues[info]['total']
+
+            for (var info in diff_values)
+                values_diff[diff_values[info]['mes'] - 1] = diff_values[info]['diff']
+
+            var ctx_analysis = document.getElementById("myChart");
+            var myChart = new Chart(ctx_analysis, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        data: values_expenses,
+                        label: "Expenses (R$)",
+                        borderColor: chart_line_color_exp,
+                        pointBackgroundColor: chart_line_color_exp,
+                        backgroundColor: chart_background_color_exp
+                    },
+                    {
+                        data: values_revenues,
+                        label: "Revenues (R$)",
+                        borderColor: chart_line_color_rev,
+                        pointBackgroundColor: chart_line_color_rev,
+                        backgroundColor: chart_background_color_rev
+                    }]
+                },
+                options: {scales: {yAxes: [{ticks: {beginAtZero: false, callback: function(value, index, values) { return float2real(value); }}}]},legend: {display: false,}}
+            });
+            console.log(values_diff)
+            var ctx_diff = document.getElementById("myChart2");
+            var myChart2 = new Chart(ctx_diff, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        data: values_diff,
+                        label: "Difference (R$)",
+                        backgroundColor: 'rgb(0, 45, 119, 0.8)'
+                    }]
+                },
+                options: {scales: {yAxes: [{ticks: {beginAtZero: false, callback: function(value, index, values) { return float2real(value); }}}]},legend: {display: false,}}
+            });
+        }
+    </script>
+    <script>
+        function changeValueState() {
+            if (($('#automatic').prop('checked') && $('#constant').prop('checked')) || $('#constant').prop('checked')) {
+            document.getElementById("value").disabled = false
+            } else {
+            document.getElementById("value").disabled = true
             }
-        });
+        }      
     </script>
   </body>
 </html>
