@@ -125,5 +125,5 @@ pip install -r requirements.txt
 3. Launch the Flask application:
 
 ```bash
-python app.py
+python keepit/index.py
 ```
